@@ -5,9 +5,10 @@
 import importlib
 import os
 import sys
+from shlex import quote as _shell_quote
 
 import portage
-from portage import _encodings, _shell_quote, _unicode_decode, _unicode_encode
+from portage import _encodings, _unicode_decode, _unicode_encode
 from portage.const import VDB_PATH
 
 
@@ -63,9 +64,10 @@ def package_from_ebuild(ebuild):
 
         portage.close_portdbapi_caches()
         importlib.reload(portage)
-    del portage.portdb.porttrees[1:]
+    porttrees = list(portage.portdb.porttrees[:1])
     if ebuild_portdir != portage.portdb.porttree_root:
-        portage.portdb.porttrees.append(ebuild_portdir)
+        porttrees.append(ebuild_portdir)
+    portage.portdb.porttrees = porttrees
 
     if not os.path.exists(ebuild):
         return False

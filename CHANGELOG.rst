@@ -7,6 +7,15 @@ Note: Changelog prior to 1.0.0 is patchy.
 1.0.1 (unreleased)
 ==================
 
+* Add metadata-driven GitHub checks for the latest published stable release,
+  with optional GITHUB_TOKEN authentication.
+* Report only the highest discovered version in quiet text output, after
+  pre-release filtering; retain all matching versions in structured output.
+* Update ebuild path handling for Portage shell-quoting and repository-list changes.
+* Add GitLab and Gitea/Forgejo release handlers.
+* Switch PyPI release discovery to the JSON API.
+* Use direct upstream URLs for PyPI and RubyGems handler detection.
+* Remove obsolete BerliOS, Freecode, and Google Code handlers.
 * Remove euscanwww
 * Remove man page
 * Major reformatting with black and isort
@@ -31,4 +40,3 @@ Note: Changelog prior to 1.0.0 is patchy.
 ===========================
 
 * Initial Release
-

@@ -15,11 +15,26 @@ It will use different heuristic to scan upstream and grab new versions and relat
 
 This tool was designed to mimic debian's uscan, but there is a major
 difference between the two: uscan uses a specific "watch" file that describes
-how it should scan packages, while euscan-ng uses only what can already be found
-in ebuilds. Of course, we could later add some informations in metadata.xml
-to help euscan-ng do its job more efficiently.
+how it should scan packages, while euscan-ng uses information from ebuilds
+and upstream identifiers in metadata.xml.
 
-euscan-ng heuristics are described in the "How does-it works?" section.
+euscan-ng heuristics are described in the "How does it work ?" section.
+
+Changes in this fork
+--------------------
+
+GitHub packages can be checked using their ``github`` remote-id in
+``metadata.xml``. The handler checks the latest published stable release and
+reports its release page when the version is newer than the ebuild. See
+"GitHub metadata" below for setup and limitations.
+
+Quiet text output selects only the highest discovered version per package,
+using Portage version ordering. Pre-release filtering is applied before this
+selection. Structured output retains all discovered versions that pass the
+filters.
+
+Ebuild path handling has also been updated for Portage versions that no longer
+provide the private shell-quoting helper or expose a mutable repository list.
 
 Examples
 --------
@@ -34,8 +49,8 @@ Examples
     Homepage: http://flori.github.com/amatch/
     Description: Approximate Matching Extension for Ruby
 
-     * SRC_URI is 'mirror://rubygems/amatch-0.2.7.gem'
-     * Using: http://rubygems.org/api/v1/versions/amatch.json
+     * SRC_URI is 'https://rubygems.org/gems/amatch-0.2.7.gem'
+     * Using RubyGem API: amatch
 
     Upstream Version: 0.2.8 http://rubygems.org/gems/amatch-0.2.8.gem
 
@@ -75,15 +90,47 @@ Examples
     Upstream Version: 5.9.2 http://www.rsyslog.com/files/download/rsyslog/rsyslog-5.9.2.tar.gz
 
 
-Hidden settings
+Configuration
+-------------
+
+Settings are read from ``/etc/euscan.conf`` and then ``~/.euscan.conf``;
+user settings override system settings. Use an ``[euscan]`` section with
+Python literal values (for example, ``True`` for booleans and quoted strings)::
+
+    [euscan]
+    quiet = True
+    ignore-pre-release = True
+    nocolor = True
+
+``ignore-pre-release-if-stable`` filters pre-releases only when the current
+ebuild version is stable. Both pre-release filters are disabled by default.
+Defaults and blacklists are defined in ``src/euscan/__init__.py``.
+
+GitHub metadata
 ---------------
 
-You can configure some settings using the command line, but the __init__.py
-file of the euscan package contains more settings, including blacklists and
-default settings.
+Add the repository's ``owner/repository`` identifier inside the package's
+``metadata.xml``::
 
-Maybe we should add the ability to use /etc/euscan.conf and
-~/.config/euscan/euscan.conf to override these settings.
+    <pkgmetadata>
+      <upstream>
+        <remote-id type="github">owner/repository</remote-id>
+      </upstream>
+    </pkgmetadata>
+
+An override can also be placed at
+``metadata/<category>/<package>/metadata.xml`` relative to the working directory.
+
+The handler requests GitHub's ``/repos/owner/repository/releases/latest`` API
+endpoint. It does not scan tags or infer the repository from ``SRC_URI``.
+Drafts and releases marked as pre-releases are rejected. A leading ``v`` before
+a digit is stripped from the release tag, and the resulting version must be
+valid for Portage. The reported URL is the release page.
+
+Set the optional ``GITHUB_TOKEN`` environment variable to authenticate API
+requests. An API error, a missing release, or an unrecognized version causes
+the scan to fail; selecting this metadata handler does not fall back to
+directory scanning or brute force.
 
 How does it work ?
 ==================
@@ -149,7 +196,7 @@ BRUTEFORCE_BLACKLIST_PACKAGES and BRUTEFORCE_BLACKLIST_URLS
   upstream is broken and will answer HTTP 200 even if the file doesn't exist.
 
 ROBOTS_TXT_BLACKLIST_DOMAINS
-  Don't respect robots.txt for these domains (sourcefourge, berlios, github.com).
+  Don't respect robots.txt for matching domains, including SourceForge and GitHub.
 
 Site handlers
 -------------
@@ -163,4 +210,19 @@ Rubygems
   (http://guides.rubygems.org/rubygems-org-api/)
 
 PyPI
-  Uses PyPI's XML rpc API.
+  Uses PyPI's JSON API to find releases and source distributions. A ``pypi``
+  remote-id can specify the upstream package name.
+
+GitHub
+  Uses the latest stable release API through a ``github`` remote-id, as
+  described in "GitHub metadata" above.
+
+GitLab
+  Uses the releases API for recognized GitLab URLs.
+
+Gitea / Forgejo
+  Uses the releases API for recognized instance URLs, including Codeberg.
+  Supported hosts are listed in ``src/euscan/handlers/gitea.py``; GitLab hosts
+  are listed in ``src/euscan/handlers/gitlab.py``.
+
+The obsolete BerliOS, Freecode, and Google Code handlers have been removed.

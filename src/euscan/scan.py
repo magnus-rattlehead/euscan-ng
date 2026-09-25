@@ -5,6 +5,7 @@
 import os
 import sys
 from datetime import datetime
+from functools import cmp_to_key
 
 import gentoolkit.pprinter as pp
 import portage
@@ -178,6 +179,15 @@ def scan_upstream(query, on_progress=None):
     output.metadata("scan_time", scan_time, show=False)
 
     is_current_version_stable = is_version_stable(ver)
+    result = [entry for entry in result if not (
+        (CONFIG["ignore-pre-release"] or
+         (CONFIG["ignore-pre-release-if-stable"] and is_current_version_stable))
+        and not is_version_stable(entry[2])
+    )]
+    if CONFIG["quiet"] and not CONFIG["format"] and result:
+        result = [max(result, key=cmp_to_key(
+            lambda left, right: portage.versions.vercmp(left[2], right[2])
+        ))]
     if len(result) > 0:
         if not (CONFIG["format"] or CONFIG["quiet"]):
             print("")
