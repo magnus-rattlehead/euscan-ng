@@ -114,9 +114,9 @@ def scan_upstream(query, on_progress=None):
     while "9999" in pkg.version and len(matches):
         pkg = matches.pop()
 
-    if not pkg:
+    if "9999" in pkg.version:
         output.ewarn(
-            pp.warn("Package '%s' only have a dev version (9999)" % pp.pkgquery(pkg.cp))
+            pp.warn("Skipping live ebuild '%s' (9999)" % pp.pkgquery(pkg.cpv))
         )
         return None
 
